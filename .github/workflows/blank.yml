@@ -10,6 +10,8 @@ jobs:
     steps:
       # Step 1: Set up GitHub authentication (using GITHUB_TOKEN for the current repo)
       - name: Set up authentication for GitHub API
+        env:
+          GITHUB_TOKEN: ${{ secrets.SECRET }}
         run: |
           echo "GITHUB_TOKEN=$GITHUB_TOKEN" >> $GITHUB_ENV
 
