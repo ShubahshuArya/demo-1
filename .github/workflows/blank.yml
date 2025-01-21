@@ -57,10 +57,7 @@ jobs:
             secret_value=$(jq -r ".secrets[] | select(.name==\"$secret\") | .value" secrets.json)
 
             # Encrypt the secret value using the public key and key_id with pkeyutl
-            echo -n "$secret_value" | openssl pkeyutl -encrypt -inkey <(echo "$public_key" | base64 --decode) -pubin | base64 > encrypted_secret.txt
-
-            # Read the encrypted value from the file
-            encrypted_value=$(cat encrypted_secret.txt)
+            encrypted_value=$(echo -n "$secret_value" | openssl pkeyutl -encrypt -inkey <(echo "$public_key" | base64 --decode) -pubin | base64)
 
             # Create secret in the target repository
             curl -X PUT -H "Authorization: token $GITHUB_TOKEN" \
