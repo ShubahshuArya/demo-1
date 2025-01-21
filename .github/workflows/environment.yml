@@ -37,13 +37,13 @@ jobs:
   demo-1_secrets:
     needs: setup
     runs-on: ubuntu-latest
-    if: contains(needs.setup.outputs.environments, 'demo-1')
+    if: contains(needs.setup.outputs.environments, 'Demo-1')
     steps:
       - name: Fetch and print secrets for demo-1 environment
         run: |
           OWNER="ShubahshuArya"
           REPO="demo-1"
-          ENVIRONMENT_NAME="demo-1"
+          ENVIRONMENT_NAME="Demo-1"
           api_url="https://api.github.com/repos/${OWNER}/${REPO}/environments/${ENVIRONMENT_NAME}/secrets"
           
           # Fetch the environment secrets from the specified environment
@@ -64,13 +64,13 @@ jobs:
   demo-2_secrets:
     needs: setup
     runs-on: ubuntu-latest
-    if: contains(needs.setup.outputs.environments, 'demo-2')
+    if: contains(needs.setup.outputs.environments, 'Demo-2')
     steps:
       - name: Fetch and print secrets for demo-2 environment
         run: |
           OWNER="ShubahshuArya"
           REPO="demo-1"
-          ENVIRONMENT_NAME="demo-2"
+          ENVIRONMENT_NAME="Demo-2"
           api_url="https://api.github.com/repos/${OWNER}/${REPO}/environments/${ENVIRONMENT_NAME}/secrets"
           
           # Fetch the environment secrets from the specified environment
