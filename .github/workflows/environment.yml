@@ -64,7 +64,7 @@ jobs:
   demo_2_secrets:
     needs: setup
     runs-on: ubuntu-latest
-    if: contains(needs.setup.outputs.environments, 'staging')
+    if: contains(needs.setup.outputs.environments, 'demo-2')
     steps:
       - name: Fetch and print secrets for staging environment
         run: |
