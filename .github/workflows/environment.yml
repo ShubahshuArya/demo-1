@@ -33,14 +33,13 @@ jobs:
           echo "Environments: $environments"
           echo "::set-output name=environments::$environments"
 
-  # Create a job for each environment
-  # You will manually define a job for each environment here.
-  demo_1_secrets:
+  # Create a job for demo-1 environment
+  demo-1_secrets:
     needs: setup
     runs-on: ubuntu-latest
     if: contains(needs.setup.outputs.environments, 'demo-1')
     steps:
-      - name: Fetch and print secrets for production environment
+      - name: Fetch and print secrets for demo-1 environment
         run: |
           OWNER="ShubahshuArya"
           REPO="demo-1"
@@ -61,12 +60,13 @@ jobs:
             echo "Environment Secret Name: $secret"
           done
 
-  demo_2_secrets:
+  # Create a job for demo-2 environment
+  demo-2_secrets:
     needs: setup
     runs-on: ubuntu-latest
     if: contains(needs.setup.outputs.environments, 'demo-2')
     steps:
-      - name: Fetch and print secrets for staging environment
+      - name: Fetch and print secrets for demo-2 environment
         run: |
           OWNER="ShubahshuArya"
           REPO="demo-1"
