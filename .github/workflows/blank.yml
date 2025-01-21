@@ -11,69 +11,44 @@ jobs:
       # Step 1: Set up GitHub authentication (using GITHUB_TOKEN for the current repo)
       - name: Set up authentication for GitHub API
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Use the default GitHub token
+          GITHUB_TOKEN: ${{ secrets.SECRET }}
         run: |
           echo "GITHUB_TOKEN=$GITHUB_TOKEN" >> $GITHUB_ENV
 
-      # Step 2: Fetch secrets from the source repository and retrieve public key for encryption
-      - name: Fetch secrets from source repository and encrypt them
+      # Step 2: Fetch the encryption public key from the source repository
+      - name: Get public key for encryption from source repository
         run: |
           source_repo="ShubahshuArya/demo-1"
-          target_repo="ShubahshuArya/demo-2"
-          api_url="https://api.github.com/repos/${source_repo}/actions/secrets"
-          public_key_url="https://api.github.com/repos/${source_repo}/actions/secrets/public-key"
+          api_url="https://api.github.com/repos/${source_repo}/actions/secrets/public-key"
           
-          # Fetch the secrets from the source repository
-          secrets_list=$(curl -s -H "Authorization: token $GITHUB_TOKEN" $api_url)
-
-          # Debug: Print the fetched secrets response
-          echo "Secrets response from source repository:"
-          echo "$secrets_list"
-          
-          # Check if the secrets list is null or empty
-          if [ "$secrets_list" == "null" ] || [ -z "$secrets_list" ]; then
-            echo "Error: No secrets found in the source repository or API call failed."
-            exit 1
-          fi
-
-          # Fetch the public key for encryption
-          public_key_response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" $public_key_url)
-
-          # Debug: Print the public key response
-          echo "Public key response:"
-          echo "$public_key_response"
-
+          # Get the public key from GitHub API
+          public_key_response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" $api_url)
           key_id=$(echo "$public_key_response" | jq -r '.key_id')
           public_key=$(echo "$public_key_response" | jq -r '.key')
 
-          # Print the secret names for debugging purposes (avoid exposing values)
-          echo "Fetched the following secrets from the source repo:"
-          echo "$secrets_list" | jq -r '.secrets[].name'
-          
-          # Save the secrets to a file for later use
-          echo "$secrets_list" > secrets.json
+          echo "key_id=$key_id" >> $GITHUB_ENV
+          echo "public_key=$public_key" >> $GITHUB_ENV
 
-          # Loop through each secret and encrypt it using the public key
-          for secret in $(jq -r '.secrets[].name' secrets.json); do
-            secret_value=$(jq -r ".secrets[] | select(.name==\"$secret\") | .value" secrets.json)
-
-            # Encrypt the secret value using the public key and key_id with pkeyutl
-            encrypted_value=$(echo -n "$secret_value" | openssl pkeyutl -encrypt -inkey <(echo "$public_key" | base64 --decode) -pubin | base64)
-
-            # Create the encrypted secret in the target repository
-            curl -X PUT -H "Authorization: token $GITHUB_TOKEN" \
-              -d "{\"encrypted_value\":\"$encrypted_value\", \"key_id\":\"$key_id\"}" \
-              https://api.github.com/repos/${target_repo}/actions/secrets/$secret
-            echo "Secret $secret created in $target_repo"
-          done
-
-      # Step 3: Migrate environment variables manually (not dynamic, specify them explicitly)
-      - name: Migrate environment variables manually
+      # Step 3: Fetch and print secrets from the source repository
+      - name: Fetch and print secrets from source repository
         run: |
-          # Example of manually migrating environment variables (as secrets or directly)
-          echo "VAR1=${{ secrets.VAR1 }}" >> $GITHUB_ENV
-          echo "VAR2=${{ secrets.VAR2 }}" >> $GITHUB_ENV
+          source_repo="ShubahshuArya/demo-1"
+          api_url="https://api.github.com/repos/${source_repo}/actions/secrets"
+          
+          # Fetch the secrets from the source repo
+          secrets_list=$(curl -s -H "Authorization: token $GITHUB_TOKEN" $api_url)
+          
+          # Print the secrets (names and values)
+          echo "Fetched the following secrets from the source repo:"
+          for secret in $(echo "$secrets_list" | jq -r '.secrets[].name'); do
+            # Fetch each secret's value using the GitHub API
+            secret_value_response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/${source_repo}/actions/secrets/$secret")
+            secret_value=$(echo "$secret_value_response" | jq -r '.value')
 
-          # Example of passing other environment variables directly (not as secrets):
-          echo "MY_ENV_VAR=some_value" >> $GITHUB_ENV
-          echo "Migrating environment variables"
+            # Print the name and value of the secret
+            echo "Secret Name: $secret"
+            echo "Secret Value: $secret_value"
+          done
+          
+          # Save the secrets list to a file for later use
+          echo "$secrets_list" > secrets.json
