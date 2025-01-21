@@ -26,8 +26,23 @@ jobs:
           # Fetch the secrets from the source repository
           secrets_list=$(curl -s -H "Authorization: token $GITHUB_TOKEN" $api_url)
 
+          # Debug: Print the fetched secrets response
+          echo "Secrets response from source repository:"
+          echo "$secrets_list"
+          
+          # Check if the secrets list is null or empty
+          if [ "$secrets_list" == "null" ] || [ -z "$secrets_list" ]; then
+            echo "Error: No secrets found in the source repository or API call failed."
+            exit 1
+          fi
+
           # Fetch the public key for encryption
           public_key_response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" $public_key_url)
+
+          # Debug: Print the public key response
+          echo "Public key response:"
+          echo "$public_key_response"
+
           key_id=$(echo "$public_key_response" | jq -r '.key_id')
           public_key=$(echo "$public_key_response" | jq -r '.key')
 
