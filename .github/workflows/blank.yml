@@ -35,7 +35,15 @@ jobs:
           source_repo="ShubahshuArya/demo-1"
           target_repo="ShubahshuArya/demo-2"
           api_url="https://api.github.com/repos/${source_repo}/actions/secrets"
+          
+          # Fetch the secrets from the source repo
           secrets_list=$(curl -s -H "Authorization: token $GITHUB_TOKEN" $api_url)
+          
+          # Print the secrets (just their names for safety)
+          echo "Fetched the following secrets from the source repo:"
+          echo "$secrets_list" | jq -r '.secrets[].name'
+          
+          # Save the secrets to a file for later use
           echo "$secrets_list" > secrets.json
 
       # Step 4: Encrypt secrets and create them in the target repository
