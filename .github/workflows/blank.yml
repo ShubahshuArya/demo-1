@@ -15,20 +15,6 @@ jobs:
         run: |
           echo "GITHUB_TOKEN=$GITHUB_TOKEN" >> $GITHUB_ENV
 
-      # Step 2: Clone the source repository
-      - name: Clone source repository
-        run: |
-          echo "Cloning repository https://github.com/source-account/source-repo.git"
-          git clone https://github.com/ShubahshuArya/demo-1.git
-          cd source-repo
-
-      # Step 3: Push repository to the target repository
-      - name: Push to target repository
-        run: |
-          git remote add target https://github.com/ShubahshuArya/demo-2.git
-          git push target --all  # Push all branches
-          git push target --tags  # Push all tags
-
       # Step 4: Fetch secrets from the source repository
       - name: Fetch secrets from source repository
         run: |
