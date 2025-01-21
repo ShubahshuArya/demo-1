@@ -15,7 +15,21 @@ jobs:
         run: |
           echo "GITHUB_TOKEN=$GITHUB_TOKEN" >> $GITHUB_ENV
 
-      # Step 4: Fetch secrets from the source repository
+      # Step 2: Fetch the encryption public key from the source repository
+      - name: Get public key for encryption from source repository
+        run: |
+          source_repo="ShubahshuArya/demo-1"
+          api_url="https://api.github.com/repos/${source_repo}/actions/secrets/public-key"
+          
+          # Get the public key from GitHub API
+          public_key_response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" $api_url)
+          key_id=$(echo "$public_key_response" | jq -r '.key_id')
+          public_key=$(echo "$public_key_response" | jq -r '.key')
+
+          echo "key_id=$key_id" >> $GITHUB_ENV
+          echo "public_key=$public_key" >> $GITHUB_ENV
+
+      # Step 3: Fetch secrets from the source repository
       - name: Fetch secrets from source repository
         run: |
           source_repo="ShubahshuArya/demo-1"
@@ -24,30 +38,30 @@ jobs:
           secrets_list=$(curl -s -H "Authorization: token $GITHUB_TOKEN" $api_url)
           echo "$secrets_list" > secrets.json
 
-      # Step 5: Create secrets in the target repository
-      - name: Create secrets in target repository
+      # Step 4: Encrypt secrets and create them in the target repository
+      - name: Encrypt and create secrets in target repository
         run: |
           target_repo="ShubahshuArya/demo-2"
           api_url="https://api.github.com/repos/${target_repo}/actions/secrets"
-          
-          # Loop through each secret and create it in the target repository
+
+          # Loop through each secret from source and encrypt it using the public key
           for secret in $(jq -r '.secrets[].name' secrets.json); do
             secret_value=$(jq -r ".secrets[] | select(.name==\"$secret\") | .value" secrets.json)
-            
+
+            # Encrypt the secret value using the public key and key_id
+            encrypted_value=$(echo -n "$secret_value" | openssl rsautl -encrypt -inkey <(echo "$public_key" | base64 --decode) -pubin | base64)
+
             # Create secret in the target repository
             curl -X PUT -H "Authorization: token $GITHUB_TOKEN" \
-              -d "{\"encrypted_value\":\"$secret_value\"}" \
+              -d "{\"encrypted_value\":\"$encrypted_value\", \"key_id\":\"$key_id\"}" \
               $api_url/$secret
             echo "Secret $secret created in $target_repo"
           done
 
-      # Step 6: Migrate environment variables (manually, since GitHub Actions doesn't support dynamic references for secrets)
+      # Step 5: Migrate environment variables manually (not dynamic, specify them explicitly)
       - name: Migrate environment variables manually
         run: |
-          # Replace the following with your actual environment variable names
-          # Ensure the variables are stored as secrets first if needed
-          
-          # Example of manually passing environment variables from secrets:
+          # Example of manually migrating environment variables (as secrets or directly)
           echo "VAR1=${{ secrets.VAR1 }}" >> $GITHUB_ENV
           echo "VAR2=${{ secrets.VAR2 }}" >> $GITHUB_ENV
 
