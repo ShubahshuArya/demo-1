@@ -22,15 +22,18 @@ jobs:
           REPO="demo-1"
           api_url="https://api.github.com/repos/${OWNER}/${REPO}/environments"
           
-          # Fetch the list of environments and store them in a variable
+          # Fetch the list of environments
           environments=$(curl -L -s \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "$api_url" | jq -r '.environments[].name')
+
+          # Output environments as a JSON array
+          environments_json=$(echo "$environments" | jq -R -s 'split("\n") | map(select(length > 0))')
           
-          echo "Environments: $environments"
-          echo "::set-output name=environments::$environments"
+          echo "Environments: $environments_json"
+          echo "::set-output name=environments::$environments_json"
 
   # Dynamic job creation based on the environments fetched above
   create_jobs:
