@@ -8,48 +8,60 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Set up GitHub authentication (using GITHUB_TOKEN for the current repo)
       - name: Set up authentication for GitHub API
         run: |
           echo "GITHUB_TOKEN=$GITHUB_TOKEN" >> $GITHUB_ENV
 
+      # Step 2: Clone the source repository
       - name: Clone source repository
         run: |
-          git clone https://github.com/source-account/source-repo.git
+          git clone https://github.com/ShubahshuArya/demo-1.git
           cd source-repo
 
+      # Step 3: Push repository to the target repository
       - name: Push to target repository
         run: |
-          git remote add target https://github.com/target-account/target-repo.git
+          git remote add target https://github.com/ShubahshuArya/demo-2.git
           git push target --all  # Push all branches
           git push target --tags  # Push all tags
 
+      # Step 4: Fetch secrets from the source repository
       - name: Fetch secrets from source repository
         run: |
-          source_repo="source-account/source-repo"
-          target_repo="target-account/target-repo"
+          source_repo="ShubahshuArya/demo-1"
+          target_repo="ShubahshuArya/demo-2"
           api_url="https://api.github.com/repos/${source_repo}/actions/secrets"
           secrets_list=$(curl -s -H "Authorization: token $GITHUB_TOKEN" $api_url)
           echo "$secrets_list" > secrets.json
 
+      # Step 5: Create secrets in the target repository
       - name: Create secrets in target repository
         run: |
-          target_repo="target-account/target-repo"
+          target_repo="ShubahshuArya/demo-2"
           api_url="https://api.github.com/repos/${target_repo}/actions/secrets"
           
+          # Loop through each secret and create it in the target repository
           for secret in $(jq -r '.secrets[].name' secrets.json); do
             secret_value=$(jq -r ".secrets[] | select(.name==\"$secret\") | .value" secrets.json)
+            
+            # Create secret in the target repository
             curl -X PUT -H "Authorization: token $GITHUB_TOKEN" \
               -d "{\"encrypted_value\":\"$secret_value\"}" \
               $api_url/$secret
             echo "Secret $secret created in $target_repo"
           done
 
-      - name: Migrate environment variables
+      # Step 6: Migrate environment variables (manually, since GitHub Actions doesn't support dynamic references for secrets)
+      - name: Migrate environment variables manually
         run: |
-          target_repo="target-account/target-repo"
-          env_vars="VAR1 VAR2"  # Replace with actual environment variables
+          # Replace the following with your actual environment variable names
+          # Ensure the variables are stored as secrets first if needed
           
-          for var in $env_vars; do
-            echo "$var=${{ secrets[$var] }}" >> $GITHUB_ENV
-            echo "Migrating environment variable $var"
-          done
+          # Example of manually passing environment variables from secrets:
+          echo "VAR1=${{ secrets.VAR1 }}" >> $GITHUB_ENV
+          echo "VAR2=${{ secrets.VAR2 }}" >> $GITHUB_ENV
+
+          # Example of passing other environment variables directly (not as secrets):
+          echo "MY_ENV_VAR=some_value" >> $GITHUB_ENV
+          echo "Migrating environment variables"
