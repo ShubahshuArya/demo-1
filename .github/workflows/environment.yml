@@ -1,0 +1,65 @@
+name: Migrate Repository and Secrets
+
+on:
+  workflow_dispatch:  # Trigger manually
+
+jobs:
+  # Step 1: Set up GitHub authentication (using GITHUB_TOKEN for the current repo)
+  setup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up authentication for GitHub API
+        env:
+          GITHUB_TOKEN: ${{ secrets.SECRET }}
+        run: |
+          echo "GITHUB_TOKEN=$GITHUB_TOKEN" >> $GITHUB_ENV
+
+      - name: Fetch environments from the repository
+        id: fetch_environments
+        run: |
+          OWNER="ShubahshuArya"
+          REPO="demo-1"
+          api_url="https://api.github.com/repos/${OWNER}/${REPO}/environments"
+          
+          # Fetch the list of environments and store them in a variable
+          environments=$(curl -L -s \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "$api_url" | jq -r '.environments[].name')
+          
+          echo "Environments: $environments"
+          echo "::set-output name=environments::$environments"
+
+  # Dynamic job creation based on the environments fetched above
+  create_jobs:
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: ${{fromJson(needs.setup.outputs.environments)}}
+    steps:
+      - name: Print environment and secrets for ${{ matrix.environment }}
+        run: |
+          OWNER="ShubahshuArya"
+          REPO="demo-1"
+          ENVIRONMENT_NAME="${{ matrix.environment }}"
+          api_url="https://api.github.com/repos/${OWNER}/${REPO}/environments/${ENVIRONMENT_NAME}/secrets"
+          
+          # Fetch the environment secrets from the specified environment
+          env_secrets_list=$(curl -L -s \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "$api_url")
+          
+          # Print the environment secrets (names only, do not print values for security)
+          echo "Fetched the following environment secrets from the ${ENVIRONMENT_NAME} environment:"
+          for secret in $(echo "$env_secrets_list" | jq -r '.secrets[].name'); do
+            # Only print the secret name, not the value (to protect sensitive data)
+            echo "Environment Secret Name: $secret"
+          done
+
+          # Optionally, you could print the entire list if needed:
+          # echo "$env_secrets_list"
