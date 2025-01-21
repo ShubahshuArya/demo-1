@@ -1,0 +1,55 @@
+name: Migrate Repository and Secrets
+
+on:
+  workflow_dispatch:  # Trigger manually
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up authentication for GitHub API
+        run: |
+          echo "GITHUB_TOKEN=$GITHUB_TOKEN" >> $GITHUB_ENV
+
+      - name: Clone source repository
+        run: |
+          git clone https://github.com/source-account/source-repo.git
+          cd source-repo
+
+      - name: Push to target repository
+        run: |
+          git remote add target https://github.com/target-account/target-repo.git
+          git push target --all  # Push all branches
+          git push target --tags  # Push all tags
+
+      - name: Fetch secrets from source repository
+        run: |
+          source_repo="source-account/source-repo"
+          target_repo="target-account/target-repo"
+          api_url="https://api.github.com/repos/${source_repo}/actions/secrets"
+          secrets_list=$(curl -s -H "Authorization: token $GITHUB_TOKEN" $api_url)
+          echo "$secrets_list" > secrets.json
+
+      - name: Create secrets in target repository
+        run: |
+          target_repo="target-account/target-repo"
+          api_url="https://api.github.com/repos/${target_repo}/actions/secrets"
+          
+          for secret in $(jq -r '.secrets[].name' secrets.json); do
+            secret_value=$(jq -r ".secrets[] | select(.name==\"$secret\") | .value" secrets.json)
+            curl -X PUT -H "Authorization: token $GITHUB_TOKEN" \
+              -d "{\"encrypted_value\":\"$secret_value\"}" \
+              $api_url/$secret
+            echo "Secret $secret created in $target_repo"
+          done
+
+      - name: Migrate environment variables
+        run: |
+          target_repo="target-account/target-repo"
+          env_vars="VAR1 VAR2"  # Replace with actual environment variables
+          
+          for var in $env_vars; do
+            echo "$var=${{ secrets[$var] }}" >> $GITHUB_ENV
+            echo "Migrating environment variable $var"
+          done
